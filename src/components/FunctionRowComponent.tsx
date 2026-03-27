@@ -163,9 +163,6 @@ export default function FunctionRowComponent({
               title="Thickness drag control"
             />
           </div>
-          {thicknessInvalid && (
-            <span className="field-error-inline">Enter a number greater than 0.</span>
-          )}
         </label>
 
         {/* Move buttons */}
@@ -228,11 +225,6 @@ export default function FunctionRowComponent({
               placeholder="-2x+1"
               hasError={!!row.error}
             />
-            {row.error && (
-              <span className="expr-error" role="alert">
-                {row.error}
-              </span>
-            )}
           </div>
         ) : (
           <div className="parametric-group">
@@ -284,11 +276,6 @@ export default function FunctionRowComponent({
                 />
               </label>
             </div>
-            {row.parametricError && (
-              <span className="expr-error" role="alert">
-                {row.parametricError}
-              </span>
-            )}
           </div>
         )}
       </div>

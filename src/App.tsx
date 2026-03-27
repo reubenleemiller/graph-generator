@@ -60,6 +60,10 @@ export default function App() {
     yMin: String(DEFAULT_VIEWPORT.yMin),
     yMax: String(DEFAULT_VIEWPORT.yMax),
   });
+  const [tickInputs, setTickInputs] = useState({
+    xStep: "1",
+    yStep: "1",
+  });
   const plotRef = useRef<PlotCanvasHandle>(null);
 
   const addRow = useCallback(() => {
@@ -101,6 +105,10 @@ export default function App() {
 
   function handleViewportChange(key: keyof ViewportConfig, value: string) {
     setViewportInputs((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleTickInputChange(key: "xStep" | "yStep", value: string) {
+    setTickInputs((prev) => ({ ...prev, [key]: value }));
   }
 
   const viewportValidation = useMemo(() => {
@@ -168,14 +176,77 @@ export default function App() {
     [rows]
   );
 
-  const renderMessage = useMemo(() => {
-    if (!hasEquation) return "Input an equation to render the graph.";
-    if (hasInvalidThickness) return "Input a valid px thickness to render the graph.";
-    if (viewportValidation.hasError) {
-      return "Input proper bounds to render the plot.";
+  const firstEquationError = useMemo(() => {
+    for (const row of rows) {
+      if (!row.enabled) continue;
+      if (row.type === "explicit" && row.error) return row.error;
+      if (row.type === "parametric" && row.parametricError) return row.parametricError;
     }
     return null;
-  }, [hasEquation, hasInvalidThickness, viewportValidation.hasError]);
+  }, [rows]);
+
+  const firstViewportError = useMemo(() => {
+    const labels: Record<keyof ViewportConfig, string> = {
+      xMin: "x min",
+      xMax: "x max",
+      yMin: "y min",
+      yMax: "y max",
+    };
+    for (const key of ["xMin", "xMax", "yMin", "yMax"] as (keyof ViewportConfig)[]) {
+      const error = viewportValidation.errors[key];
+      if (error) return `${labels[key]}: ${error}`;
+    }
+    return null;
+  }, [viewportValidation.errors]);
+
+  const tickValidation = useMemo(() => {
+    const errors = {
+      xStep: null as string | null,
+      yStep: null as string | null,
+    };
+
+    const parseStep = (value: string, axisLabel: string): number => {
+      const raw = value.trim();
+      if (!raw) {
+        errors[axisLabel === "x" ? "xStep" : "yStep"] = "Required";
+        return 1;
+      }
+      const n = Number(raw);
+      if (!Number.isFinite(n)) {
+        errors[axisLabel === "x" ? "xStep" : "yStep"] = "Invalid number";
+        return 1;
+      }
+      if (n <= 0) {
+        errors[axisLabel === "x" ? "xStep" : "yStep"] = "Must be greater than 0";
+        return 1;
+      }
+      return n;
+    };
+
+    const xStep = parseStep(tickInputs.xStep, "x");
+    const yStep = parseStep(tickInputs.yStep, "y");
+
+    return {
+      errors,
+      xStep,
+      yStep,
+    };
+  }, [tickInputs]);
+
+  const firstTickError = useMemo(() => {
+    if (tickValidation.errors.xStep) return `x-axis ticks: ${tickValidation.errors.xStep}`;
+    if (tickValidation.errors.yStep) return `y-axis ticks: ${tickValidation.errors.yStep}`;
+    return null;
+  }, [tickValidation.errors.xStep, tickValidation.errors.yStep]);
+
+  const renderMessage = useMemo(() => {
+    if (firstEquationError) return firstEquationError;
+    if (!hasEquation) return "Input an equation to render the graph.";
+    if (hasInvalidThickness) return "Input a valid px thickness to render the graph.";
+    if (firstViewportError) return firstViewportError;
+    if (firstTickError) return firstTickError;
+    return null;
+  }, [firstEquationError, hasEquation, hasInvalidThickness, firstViewportError, firstTickError]);
 
   const canRenderPlot = renderMessage === null;
 
@@ -308,33 +379,82 @@ export default function App() {
               ).map(([key, label]) => (
                 <label key={key} className="viewport-label">
                   <span>{label}</span>
-                  <div className="viewport-field-stack">
-                    <div className="viewport-controls-inline">
-                      <input
-                        type="number"
-                        value={viewportInputs[key]}
-                        step={1}
-                        onChange={(e) => handleViewportChange(key, e.target.value)}
-                        className={`viewport-input ${viewportValidation.errors[key] ? "viewport-input--error" : ""}`}
-                        aria-invalid={!!viewportValidation.errors[key]}
-                      />
-                      <input
-                        type="range"
-                        min={-50}
-                        max={50}
-                        step={0.5}
-                        value={Number.isFinite(Number(viewportInputs[key])) ? Number(viewportInputs[key]) : 0}
-                        onChange={(e) => handleViewportChange(key, e.target.value)}
-                        className="drag-slider"
-                        title={`${label} drag control`}
-                      />
-                    </div>
-                    {viewportValidation.errors[key] && (
-                      <span className="field-error-inline">{viewportValidation.errors[key]}</span>
-                    )}
+                  <div className="viewport-controls-inline">
+                    <input
+                      type="number"
+                      value={viewportInputs[key]}
+                      step={1}
+                      onChange={(e) => handleViewportChange(key, e.target.value)}
+                      className={`viewport-input ${viewportValidation.errors[key] ? "viewport-input--error" : ""}`}
+                      aria-invalid={!!viewportValidation.errors[key]}
+                    />
+                    <input
+                      type="range"
+                      min={-50}
+                      max={50}
+                      step={0.5}
+                      value={Number.isFinite(Number(viewportInputs[key])) ? Number(viewportInputs[key]) : 0}
+                      onChange={(e) => handleViewportChange(key, e.target.value)}
+                      className="drag-slider"
+                      title={`${label} drag control`}
+                    />
                   </div>
                 </label>
               ))}
+            </div>
+          </div>
+
+          <div className="axis-tick-controls">
+            <h3>Axis Ticks</h3>
+            <div className="axis-tick-grid">
+              <label className="axis-tick-label">
+                <span>x step</span>
+                <div className="axis-tick-controls-inline">
+                  <input
+                    type="number"
+                    min={0.1}
+                    step="any"
+                    value={tickInputs.xStep}
+                    onChange={(e) => handleTickInputChange("xStep", e.target.value)}
+                    className={`axis-tick-input ${tickValidation.errors.xStep ? "axis-tick-input--error" : ""}`}
+                    aria-invalid={!!tickValidation.errors.xStep}
+                  />
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={10}
+                    step={0.1}
+                    value={Number.isFinite(Number(tickInputs.xStep)) && Number(tickInputs.xStep) > 0 ? Number(tickInputs.xStep) : 1}
+                    onChange={(e) => handleTickInputChange("xStep", e.target.value)}
+                    className="drag-slider"
+                    title="x-axis tick step drag control"
+                  />
+                </div>
+              </label>
+              <label className="axis-tick-label">
+                <span>y step</span>
+                <div className="axis-tick-controls-inline">
+                  <input
+                    type="number"
+                    min={0.1}
+                    step="any"
+                    value={tickInputs.yStep}
+                    onChange={(e) => handleTickInputChange("yStep", e.target.value)}
+                    className={`axis-tick-input ${tickValidation.errors.yStep ? "axis-tick-input--error" : ""}`}
+                    aria-invalid={!!tickValidation.errors.yStep}
+                  />
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={10}
+                    step={0.1}
+                    value={Number.isFinite(Number(tickInputs.yStep)) && Number(tickInputs.yStep) > 0 ? Number(tickInputs.yStep) : 1}
+                    onChange={(e) => handleTickInputChange("yStep", e.target.value)}
+                    className="drag-slider"
+                    title="y-axis tick step drag control"
+                  />
+                </div>
+              </label>
             </div>
           </div>
 
@@ -371,6 +491,8 @@ export default function App() {
               ref={plotRef}
               rows={rows}
               viewport={viewportValidation.viewport}
+              xTickStep={tickValidation.xStep}
+              yTickStep={tickValidation.yStep}
               size={540}
               resolution={2}
             />

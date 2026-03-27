@@ -15,6 +15,8 @@ export interface PlotCanvasHandle {
 interface PlotCanvasProps {
   rows: FunctionRow[];
   viewport: ViewportConfig;
+  xTickStep?: number;
+  yTickStep?: number;
   size?: number; // CSS pixel size of the canvas
   resolution?: number; // backing pixel multiplier for HiDPI
 }
@@ -28,10 +30,38 @@ function drawPlot(
   ctx: CanvasRenderingContext2D,
   rows: FunctionRow[],
   viewport: ViewportConfig,
+  xTickStep: number,
+  yTickStep: number,
   canvasSize: number
 ): void {
   const { xMin, xMax, yMin, yMax } = viewport;
   const plotSize = canvasSize - PLOT_PADDING * 2;
+  const EPSILON = 1e-9;
+
+  function buildTicks(min: number, max: number, step: number): number[] {
+    if (!Number.isFinite(step) || step <= 0) return [];
+    const ticks: number[] = [];
+    const start = Math.ceil((min - EPSILON) / step) * step;
+    const maxTicks = 2000;
+    for (let i = 0; i < maxTicks; i++) {
+      const value = start + i * step;
+      if (value > max + EPSILON) break;
+      const normalized = Math.abs(value) < EPSILON ? 0 : Number(value.toFixed(8));
+      ticks.push(normalized);
+    }
+    return ticks;
+  }
+
+  function formatTickValue(value: number): string {
+    if (Math.abs(value) < EPSILON) return "0";
+    const normalized = Number(value.toFixed(6));
+    return Number.isInteger(normalized)
+      ? String(normalized)
+      : normalized.toString().replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+  }
+
+  const xTicks = buildTicks(xMin, xMax, xTickStep);
+  const yTicks = buildTicks(yMin, yMax, yTickStep);
 
   // Helper: math coords → canvas coords
   function toCanvasX(x: number): number {
@@ -51,9 +81,7 @@ function drawPlot(
   ctx.strokeStyle = "rgba(128,128,128,0.6)";
   ctx.lineWidth = 0.8;
 
-  const xGridMin = Math.ceil(xMin);
-  const xGridMax = Math.floor(xMax);
-  for (let gx = xGridMin; gx <= xGridMax; gx++) {
+  for (const gx of xTicks) {
     const cx = toCanvasX(gx);
     ctx.beginPath();
     ctx.moveTo(cx, PLOT_PADDING);
@@ -61,9 +89,7 @@ function drawPlot(
     ctx.stroke();
   }
 
-  const yGridMin = Math.ceil(yMin);
-  const yGridMax = Math.floor(yMax);
-  for (let gy = yGridMin; gy <= yGridMax; gy++) {
+  for (const gy of yTicks) {
     const cy = toCanvasY(gy);
     ctx.beginPath();
     ctx.moveTo(PLOT_PADDING, cy);
@@ -145,26 +171,26 @@ function drawPlot(
   const xAxisYCanvas = toCanvasY(axisY);
   const yAxisXCanvas = toCanvasX(axisX);
 
-  for (let tx = xGridMin; tx <= xGridMax; tx++) {
-    if (tx === 0) continue;
+  for (const tx of xTicks) {
+    if (Math.abs(tx) < EPSILON) continue;
     const cx = toCanvasX(tx);
     ctx.beginPath();
     ctx.moveTo(cx, xAxisYCanvas - TICK_SIZE);
     ctx.lineTo(cx, xAxisYCanvas + TICK_SIZE);
     ctx.stroke();
-    ctx.fillText(String(tx), cx, xAxisYCanvas + TICK_SIZE + 2);
+    ctx.fillText(formatTickValue(tx), cx, xAxisYCanvas + TICK_SIZE + 2);
   }
 
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  for (let ty = yGridMin; ty <= yGridMax; ty++) {
-    if (ty === 0) continue;
+  for (const ty of yTicks) {
+    if (Math.abs(ty) < EPSILON) continue;
     const cy = toCanvasY(ty);
     ctx.beginPath();
     ctx.moveTo(yAxisXCanvas - TICK_SIZE, cy);
     ctx.lineTo(yAxisXCanvas + TICK_SIZE, cy);
     ctx.stroke();
-    ctx.fillText(String(ty), yAxisXCanvas - TICK_SIZE - 3, cy);
+    ctx.fillText(formatTickValue(ty), yAxisXCanvas - TICK_SIZE - 3, cy);
   }
   ctx.restore();
 
@@ -333,7 +359,7 @@ function drawPlot(
 
 const PlotCanvas = forwardRef<PlotCanvasHandle, PlotCanvasProps>(
   function PlotCanvas(
-    { rows, viewport, size = 540, resolution = 2 },
+    { rows, viewport, xTickStep = 1, yTickStep = 1, size = 540, resolution = 2 },
     ref
   ) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -346,9 +372,9 @@ const PlotCanvas = forwardRef<PlotCanvasHandle, PlotCanvasProps>(
       if (!ctx) return;
       ctx.save();
       ctx.scale(resolution, resolution);
-      drawPlot(ctx, rows, viewport, size);
+      drawPlot(ctx, rows, viewport, xTickStep, yTickStep, size);
       ctx.restore();
-    }, [rows, viewport, size, resolution]);
+    }, [rows, viewport, xTickStep, yTickStep, size, resolution]);
 
     useEffect(() => {
       render();
@@ -366,7 +392,7 @@ const PlotCanvas = forwardRef<PlotCanvasHandle, PlotCanvasProps>(
         if (!ctx) return null;
         ctx.save();
         ctx.scale(resolution, resolution);
-        drawPlot(ctx, [row], viewport, size);
+        drawPlot(ctx, [row], viewport, xTickStep, yTickStep, size);
         ctx.restore();
         return offscreen;
       },
