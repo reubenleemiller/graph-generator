@@ -5,6 +5,7 @@ export interface FunctionRow {
   enabled: boolean;
   color: string;
   thickness: number;
+  thicknessDraft: string;
   type: FunctionType;
   // Explicit: y = f(x)
   expression: string;       // mathjs-parseable expression

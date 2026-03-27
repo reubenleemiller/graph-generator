@@ -38,6 +38,11 @@ export default function FunctionRowComponent({
   onExportPNG,
   onExportPDF,
 }: FunctionRowProps) {
+  const thicknessRaw = row.thicknessDraft.trim();
+  const thicknessInvalid =
+    row.enabled &&
+    (!thicknessRaw || !Number.isFinite(Number(thicknessRaw)) || Number(thicknessRaw) <= 0);
+
   function handleExpressionChange(mathjsExpr: string) {
     const error = validateExpression(mathjsExpr);
     onChange(row.id, { expression: mathjsExpr, error });
@@ -124,18 +129,43 @@ export default function FunctionRowComponent({
         {/* Thickness */}
         <label className="thickness-label">
           <span>px</span>
-          <input
-            type="number"
-            min={0.5}
-            max={10}
-            step={0.5}
-            value={row.thickness}
-            onChange={(e) =>
-              onChange(row.id, { thickness: parseFloat(e.target.value) || 2 })
-            }
-            className="thickness-input"
-            title="Line thickness (pixels)"
-          />
+          <div className="thickness-controls-inline">
+            <input
+              type="number"
+              min={0.5}
+              max={10}
+              step={0.5}
+              value={row.thicknessDraft}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const parsed = Number(raw);
+                if (raw.trim() && Number.isFinite(parsed) && parsed > 0) {
+                  onChange(row.id, { thicknessDraft: raw, thickness: parsed });
+                  return;
+                }
+                onChange(row.id, { thicknessDraft: raw });
+              }}
+              className={`thickness-input ${thicknessInvalid ? "thickness-input--error" : ""}`}
+              aria-invalid={thicknessInvalid}
+              title="Line thickness (pixels)"
+            />
+            <input
+              type="range"
+              min={0.5}
+              max={10}
+              step={0.5}
+              value={Number.isFinite(Number(row.thicknessDraft)) ? Number(row.thicknessDraft) : 2}
+              onChange={(e) => {
+                const raw = e.target.value;
+                onChange(row.id, { thicknessDraft: raw, thickness: Number(raw) });
+              }}
+              className="drag-slider"
+              title="Thickness drag control"
+            />
+          </div>
+          {thicknessInvalid && (
+            <span className="field-error-inline">Enter a number greater than 0.</span>
+          )}
         </label>
 
         {/* Move buttons */}

@@ -86,6 +86,7 @@ export default function MathInput({
 
     function handleInput() {
       const newLatex = el!.value;
+      if (newLatex === lastSetLatex.current) return;
       lastSetLatex.current = newLatex;
       onLatexChangeRef.current(newLatex);
       onChangeRef.current(latexToMathjs(newLatex));

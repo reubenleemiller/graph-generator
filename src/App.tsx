@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 import PlotCanvas from "./components/PlotCanvas";
 import type { PlotCanvasHandle } from "./components/PlotCanvas";
 import FunctionRowComponent from "./components/FunctionRowComponent";
@@ -18,6 +18,7 @@ function makeDefaultRow(color = "#2563eb"): FunctionRow {
     enabled: true,
     color,
     thickness: 2,
+    thicknessDraft: "2",
     type: "explicit",
     expression: "",
     expressionLatex: "",
@@ -51,11 +52,14 @@ const COLORS = [
 export default function App() {
   const [rows, setRows] = useState<FunctionRow[]>(() => {
     const r = makeDefaultRow();
-    r.expression = "-2*x + 1";
-    r.expressionLatex = "-2x+1";
     return [r];
   });
-  const [viewport, setViewport] = useState<ViewportConfig>(DEFAULT_VIEWPORT);
+  const [viewportInputs, setViewportInputs] = useState<Record<keyof ViewportConfig, string>>({
+    xMin: String(DEFAULT_VIEWPORT.xMin),
+    xMax: String(DEFAULT_VIEWPORT.xMax),
+    yMin: String(DEFAULT_VIEWPORT.yMin),
+    yMax: String(DEFAULT_VIEWPORT.yMax),
+  });
   const plotRef = useRef<PlotCanvasHandle>(null);
 
   const addRow = useCallback(() => {
@@ -96,13 +100,87 @@ export default function App() {
   }, []);
 
   function handleViewportChange(key: keyof ViewportConfig, value: string) {
-    const num = parseFloat(value);
-    if (!isNaN(num)) {
-      setViewport((v) => ({ ...v, [key]: num }));
-    }
+    setViewportInputs((prev) => ({ ...prev, [key]: value }));
   }
 
+  const viewportValidation = useMemo(() => {
+    const keys: (keyof ViewportConfig)[] = ["xMin", "xMax", "yMin", "yMax"];
+    const errors: Record<keyof ViewportConfig, string | null> = {
+      xMin: null,
+      xMax: null,
+      yMin: null,
+      yMax: null,
+    };
+    const parsed: Partial<Record<keyof ViewportConfig, number>> = {};
+
+    for (const key of keys) {
+      const raw = viewportInputs[key].trim();
+      if (!raw) {
+        errors[key] = "Required";
+        continue;
+      }
+      const value = Number(raw);
+      if (!Number.isFinite(value)) {
+        errors[key] = "Invalid number";
+        continue;
+      }
+      parsed[key] = value;
+    }
+
+    if (!errors.xMin && !errors.xMax && parsed.xMin! >= parsed.xMax!) {
+      errors.xMin = "Must be less than x max";
+      errors.xMax = "Must be greater than x min";
+    }
+
+    if (!errors.yMin && !errors.yMax && parsed.yMin! >= parsed.yMax!) {
+      errors.yMin = "Must be less than y max";
+      errors.yMax = "Must be greater than y min";
+    }
+
+    const hasError = keys.some((key) => errors[key] !== null);
+
+    return {
+      errors,
+      hasError,
+      viewport: hasError ? DEFAULT_VIEWPORT : (parsed as ViewportConfig),
+    };
+  }, [viewportInputs]);
+
+  const hasEquation = useMemo(
+    () =>
+      rows.some((row) => {
+        if (!row.enabled) return false;
+        if (row.type === "explicit") return row.expression.trim().length > 0;
+        return row.xExpr.trim().length > 0 && row.yExpr.trim().length > 0;
+      }),
+    [rows]
+  );
+
+  const hasInvalidThickness = useMemo(
+    () =>
+      rows.some((row) => {
+        if (!row.enabled) return false;
+        const raw = row.thicknessDraft.trim();
+        if (!raw) return true;
+        const value = Number(raw);
+        return !Number.isFinite(value) || value <= 0;
+      }),
+    [rows]
+  );
+
+  const renderMessage = useMemo(() => {
+    if (!hasEquation) return "Input an equation to render the graph.";
+    if (hasInvalidThickness) return "Input a valid px thickness to render the graph.";
+    if (viewportValidation.hasError) {
+      return "Input proper bounds to render the plot.";
+    }
+    return null;
+  }, [hasEquation, hasInvalidThickness, viewportValidation.hasError]);
+
+  const canRenderPlot = renderMessage === null;
+
   function exportSinglePNG(id: string) {
+    if (!canRenderPlot) return;
     const row = rows.find((r) => r.id === id);
     if (!row || !plotRef.current) return;
     const canvas = plotRef.current.renderSingle(row);
@@ -116,7 +194,7 @@ export default function App() {
   }
 
   function exportAllFunctionsPNG() {
-    if (!plotRef.current) return;
+    if (!plotRef.current || !canRenderPlot) return;
     const enabledRows = rows.filter((r) => r.enabled);
     if (enabledRows.length === 0) return;
     enabledRows.forEach((row, i) => {
@@ -131,6 +209,7 @@ export default function App() {
   }
 
   function exportSinglePDF(id: string) {
+    if (!canRenderPlot) return;
     const row = rows.find((r) => r.id === id);
     if (!row || !plotRef.current) return;
     const canvas = plotRef.current.renderSingle(row);
@@ -144,19 +223,21 @@ export default function App() {
   }
 
   function exportCombinedPNG() {
+    if (!canRenderPlot) return;
     const canvas = plotRef.current?.getCanvas();
     if (!canvas) return;
     downloadCanvasAsPNG(canvas, "graph_combined.png");
   }
 
   function exportAllCombinedPDF() {
+    if (!canRenderPlot) return;
     const canvas = plotRef.current?.getCanvas();
     if (!canvas) return;
     exportCanvasAsPDF(canvas, "graph_combined.pdf");
   }
 
   function exportAllFunctionsPDF() {
-    if (!plotRef.current) return;
+    if (!plotRef.current || !canRenderPlot) return;
     const enabledRows = rows.filter((r) => r.enabled);
     if (enabledRows.length === 0) return;
     const canvasEntries = enabledRows
@@ -227,13 +308,31 @@ export default function App() {
               ).map(([key, label]) => (
                 <label key={key} className="viewport-label">
                   <span>{label}</span>
-                  <input
-                    type="number"
-                    value={viewport[key]}
-                    step={1}
-                    onChange={(e) => handleViewportChange(key, e.target.value)}
-                    className="viewport-input"
-                  />
+                  <div className="viewport-field-stack">
+                    <div className="viewport-controls-inline">
+                      <input
+                        type="number"
+                        value={viewportInputs[key]}
+                        step={1}
+                        onChange={(e) => handleViewportChange(key, e.target.value)}
+                        className={`viewport-input ${viewportValidation.errors[key] ? "viewport-input--error" : ""}`}
+                        aria-invalid={!!viewportValidation.errors[key]}
+                      />
+                      <input
+                        type="range"
+                        min={-50}
+                        max={50}
+                        step={0.5}
+                        value={Number.isFinite(Number(viewportInputs[key])) ? Number(viewportInputs[key]) : 0}
+                        onChange={(e) => handleViewportChange(key, e.target.value)}
+                        className="drag-slider"
+                        title={`${label} drag control`}
+                      />
+                    </div>
+                    {viewportValidation.errors[key] && (
+                      <span className="field-error-inline">{viewportValidation.errors[key]}</span>
+                    )}
+                  </div>
                 </label>
               ))}
             </div>
@@ -267,13 +366,19 @@ export default function App() {
         </section>
 
         <section className="panel panel--plot">
-          <PlotCanvas
-            ref={plotRef}
-            rows={rows}
-            viewport={viewport}
-            size={540}
-            resolution={2}
-          />
+          {canRenderPlot ? (
+            <PlotCanvas
+              ref={plotRef}
+              rows={rows}
+              viewport={viewportValidation.viewport}
+              size={540}
+              resolution={2}
+            />
+          ) : (
+            <div className="plot-empty-state" role="status">
+              {renderMessage}
+            </div>
+          )}
           <p className="plot-hint">
             ● Points shown only where both x and y are integers.
           </p>

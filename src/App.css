@@ -180,8 +180,24 @@ body {
 }
 
 /* ── Thickness ────────────────────────────────────────────────────────────── */
-.thickness-label { display: flex; align-items: center; gap: .2rem; font-size: .75rem; color: #64748b; }
-.thickness-input { width: 42px; font-size: .75rem; padding: .15rem .25rem; border: 1px solid #e2e8f0; border-radius: 4px; }
+.thickness-label { display: flex; align-items: center; gap: .35rem; font-size: .75rem; color: #64748b; min-width: 180px; flex-wrap: wrap; }
+.thickness-controls-inline { display: flex; align-items: center; gap: .45rem; flex: 1; min-width: 0; }
+.thickness-input { width: 56px; font-size: .75rem; padding: .15rem .25rem; border: 1px solid #e2e8f0; border-radius: 4px; }
+.thickness-input--error { border-color: #dc2626; }
+
+.field-error-inline {
+  width: 100%;
+  color: #dc2626;
+  font-size: .7rem;
+  line-height: 1.2;
+}
+
+.drag-slider {
+  flex: 1;
+  min-width: 84px;
+  accent-color: #2563eb;
+  cursor: ew-resize;
+}
 
 /* ── Move + export buttons ────────────────────────────────────────────────── */
 .move-buttons { display: flex; gap: .2rem; }
@@ -250,10 +266,13 @@ math-field.math-input--error {
 /* ── Viewport & export controls ───────────────────────────────────────────── */
 .viewport-controls { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
 .viewport-controls h3, .global-export h3 { font-size: .85rem; font-weight: 600; color: #475569; margin-bottom: .6rem; }
-.viewport-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem .8rem; }
+.viewport-grid { display: grid; grid-template-columns: 1fr; gap: .5rem; }
 .viewport-label { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: #475569; }
 .viewport-label span { width: 36px; }
-.viewport-input { flex: 1; font-size: .8rem; padding: .2rem .35rem; border: 1px solid #e2e8f0; border-radius: 4px; }
+.viewport-field-stack { display: flex; flex-direction: column; gap: .15rem; flex: 1; min-width: 0; }
+.viewport-controls-inline { display: flex; align-items: center; gap: .45rem; flex: 1; min-width: 0; }
+.viewport-input { width: 76px; font-size: .8rem; padding: .2rem .35rem; border: 1px solid #e2e8f0; border-radius: 4px; }
+.viewport-input--error { border-color: #dc2626; }
 
 .global-export { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
 .global-export__buttons { display: flex; gap: .5rem; flex-wrap: wrap; }
@@ -281,6 +300,22 @@ math-field.math-input--error {
   border: 1px solid #ccc;
   background: #fff;
   overflow: hidden;
+}
+
+.plot-empty-state {
+  width: 100%;
+  max-width: 540px;
+  aspect-ratio: 1 / 1;
+  border: 1px dashed #94a3b8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  font-size: 1rem;
 }
 
 /* ── Mobile (≤ 640 px) ──────────────────────────────────────────────────── */
