@@ -63,7 +63,7 @@ export function compileParametricExpr(raw: string): (t: number) => number {
   }
 }
 
-const EPSILON = 1e-6;
+const EPSILON = 1e-9;
 
 /**
  * Check whether a value is (close to) an integer.

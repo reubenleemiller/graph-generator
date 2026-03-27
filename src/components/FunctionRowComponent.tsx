@@ -1,5 +1,6 @@
 import type { FunctionRow } from "../types";
 import { validateExpression, validateParametricExpressions } from "../utils/math";
+import MathInput from "./MathInput";
 
 interface FunctionRowProps {
   row: FunctionRow;
@@ -37,19 +38,31 @@ export default function FunctionRowComponent({
   onExportPNG,
   onExportPDF,
 }: FunctionRowProps) {
-  function handleExpressionChange(value: string) {
-    const error = validateExpression(value);
-    onChange(row.id, { expression: value, error });
+  function handleExpressionChange(mathjsExpr: string) {
+    const error = validateExpression(mathjsExpr);
+    onChange(row.id, { expression: mathjsExpr, error });
   }
 
-  function handleXExprChange(value: string) {
-    const error = validateParametricExpressions(value, row.yExpr);
-    onChange(row.id, { xExpr: value, parametricError: error });
+  function handleExpressionLatexChange(latex: string) {
+    onChange(row.id, { expressionLatex: latex });
   }
 
-  function handleYExprChange(value: string) {
-    const error = validateParametricExpressions(row.xExpr, value);
-    onChange(row.id, { yExpr: value, parametricError: error });
+  function handleXExprChange(mathjsExpr: string) {
+    const error = validateParametricExpressions(mathjsExpr, row.yExpr);
+    onChange(row.id, { xExpr: mathjsExpr, parametricError: error });
+  }
+
+  function handleXLatexChange(latex: string) {
+    onChange(row.id, { xExprLatex: latex });
+  }
+
+  function handleYExprChange(mathjsExpr: string) {
+    const error = validateParametricExpressions(row.xExpr, mathjsExpr);
+    onChange(row.id, { yExpr: mathjsExpr, parametricError: error });
+  }
+
+  function handleYLatexChange(latex: string) {
+    onChange(row.id, { yExprLatex: latex });
   }
 
   function handleTypeToggle() {
@@ -178,13 +191,12 @@ export default function FunctionRowComponent({
         {row.type === "explicit" ? (
           <div className="expr-group">
             <span className="expr-prefix">y =</span>
-            <input
-              type="text"
-              className={`expr-input ${row.error ? "expr-input--error" : ""}`}
-              value={row.expression}
-              onChange={(e) => handleExpressionChange(e.target.value)}
-              placeholder="e.g. -2x + 1  or  sin(x)  or  x^2 - 3x"
-              spellCheck={false}
+            <MathInput
+              latex={row.expressionLatex}
+              onLatexChange={handleExpressionLatexChange}
+              onChange={handleExpressionChange}
+              placeholder="-2x+1"
+              hasError={!!row.error}
             />
             {row.error && (
               <span className="expr-error" role="alert">
@@ -196,24 +208,22 @@ export default function FunctionRowComponent({
           <div className="parametric-group">
             <div className="expr-group">
               <span className="expr-prefix">x(t) =</span>
-              <input
-                type="text"
-                className={`expr-input ${row.parametricError ? "expr-input--error" : ""}`}
-                value={row.xExpr}
-                onChange={(e) => handleXExprChange(e.target.value)}
-                placeholder="e.g. cos(t)"
-                spellCheck={false}
+              <MathInput
+                latex={row.xExprLatex}
+                onLatexChange={handleXLatexChange}
+                onChange={handleXExprChange}
+                placeholder="\cos\left(t\right)"
+                hasError={!!row.parametricError}
               />
             </div>
             <div className="expr-group">
               <span className="expr-prefix">y(t) =</span>
-              <input
-                type="text"
-                className={`expr-input ${row.parametricError ? "expr-input--error" : ""}`}
-                value={row.yExpr}
-                onChange={(e) => handleYExprChange(e.target.value)}
-                placeholder="e.g. sin(t)"
-                spellCheck={false}
+              <MathInput
+                latex={row.yExprLatex}
+                onLatexChange={handleYLatexChange}
+                onChange={handleYExprChange}
+                placeholder="\sin\left(t\right)"
+                hasError={!!row.parametricError}
               />
             </div>
             <div className="parametric-trange">

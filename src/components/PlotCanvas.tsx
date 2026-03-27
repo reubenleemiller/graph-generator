@@ -20,7 +20,8 @@ interface PlotCanvasProps {
 }
 
 const PLOT_PADDING = 48; // pixels (inside canvas) for axes/ticks
-const TICK_SIZE = 8;
+const TICK_SIZE = 12;   // increased for bolder axis ticks
+const TICK_WIDTH = 2.5; // thicker tick stroke
 const FONT_FAMILY = "Times New Roman, serif";
 
 function drawPlot(
@@ -136,7 +137,7 @@ function drawPlot(
   ctx.save();
   ctx.strokeStyle = "#000";
   ctx.fillStyle = "#000";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = TICK_WIDTH;
   ctx.font = `14px ${FONT_FAMILY}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";

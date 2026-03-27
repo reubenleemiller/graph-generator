@@ -20,9 +20,12 @@ function makeDefaultRow(color = "#2563eb"): FunctionRow {
     thickness: 2,
     type: "explicit",
     expression: "",
+    expressionLatex: "",
     error: null,
     xExpr: "",
+    xExprLatex: "",
     yExpr: "",
+    yExprLatex: "",
     tMin: 0,
     tMax: 2 * Math.PI,
     parametricError: null,
@@ -48,7 +51,8 @@ const COLORS = [
 export default function App() {
   const [rows, setRows] = useState<FunctionRow[]>(() => {
     const r = makeDefaultRow();
-    r.expression = "-2x + 1";
+    r.expression = "-2*x + 1";
+    r.expressionLatex = "-2x+1";
     return [r];
   });
   const [viewport, setViewport] = useState<ViewportConfig>(DEFAULT_VIEWPORT);

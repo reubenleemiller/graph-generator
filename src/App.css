@@ -30,8 +30,8 @@ body {
 }
 
 /* ── Panels ───────────────────────────────────────────────────────────────── */
-.panel { background: #fff; border-radius: 10px; padding: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.1); overflow: hidden; }
-.panel--functions { flex: 1; min-width: 320px; max-width: 520px; }
+.panel { background: #fff; border-radius: 10px; padding: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.1); overflow: hidden; min-width: 0; }
+.panel--functions { flex: 1; min-width: 280px; max-width: 540px; overflow: hidden; }
 .panel--plot { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
 
 .panel__header {
@@ -129,7 +129,7 @@ body {
 
 .function-row__label { font-size: .8rem; font-weight: 600; color: #475569; width: 20px; }
 
-.function-row__body { margin-top: .6rem; min-width: 0; width: 100%; }
+.function-row__body { margin-top: .6rem; min-width: 0; width: 100%; overflow: hidden; }
 
 /* ── Toggle switch ────────────────────────────────────────────────────────── */
 .toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
@@ -190,7 +190,7 @@ body {
 /* ── Expression input ─────────────────────────────────────────────────────── */
 .expr-group {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: .4rem;
   flex-wrap: nowrap;
   min-width: 0;
@@ -204,24 +204,36 @@ body {
   font-style: italic;
   flex-shrink: 0;
 }
-.expr-input {
+
+/* ── MathLive math-field WYSIWYG input ──────────────────────────────────── */
+math-field.math-input {
   flex: 1;
   min-width: 0;
-  font-family: "Times New Roman", Times, serif;
   font-size: 1rem;
-  padding: .35rem .55rem;
   border: 1.5px solid #cbd5e1;
   border-radius: 6px;
-  outline: none;
   background: #fafafa;
+  padding: 0.2rem 0.4rem;
+  /* Prevent overflow out of the parent container */
+  overflow: hidden;
+  display: block;
+  max-width: 100%;
+  box-sizing: border-box;
   transition: border-color .15s, box-shadow .15s;
+  --caret-color: #2563eb;
+  --selection-background-color: rgba(37, 99, 235, 0.15);
+  --primary-color: #2563eb;
 }
-.expr-input:focus {
+math-field.math-input:focus-within {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   background: #fff;
+  outline: none;
 }
-.expr-input--error { border-color: #dc2626; }
+math-field.math-input--error {
+  border-color: #dc2626;
+}
+
 .expr-error {
   display: block;
   width: 100%;
@@ -306,4 +318,7 @@ body {
   /* Slightly larger tap targets for colour swatches */
   .color-swatch { width: 20px; height: 20px; }
   .color-picker-input { width: 28px; height: 28px; }
+
+  /* Math field on mobile */
+  math-field.math-input { font-size: .95rem; }
 }

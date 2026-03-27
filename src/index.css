@@ -1,3 +1,6 @@
+/* Mathlive (WYSIWYG math input) fonts */
+@import "mathlive/fonts.css";
+
 /* Global reset is handled by App.css */
 body {
   margin: 0;

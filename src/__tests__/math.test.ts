@@ -79,8 +79,8 @@ describe("isInteger", () => {
   });
 
   it("returns true for values within epsilon of an integer", () => {
-    expect(isInteger(2.9999999)).toBe(true);
-    expect(isInteger(3.0000001)).toBe(true);
+    expect(isInteger(2.9999999999)).toBe(true);
+    expect(isInteger(3.0000000001)).toBe(true);
   });
 
   it("returns false for non-integers", () => {
