@@ -73,6 +73,43 @@ export function isInteger(value: number, epsilon = EPSILON): boolean {
 }
 
 /**
+ * Compute integer-coordinate lattice points for a parametric curve (x(t), y(t)).
+ * Samples t densely and collects unique (x, y) pairs where both are integers.
+ */
+export function computeParametricLatticePoints(
+  xFn: (t: number) => number,
+  yFn: (t: number) => number,
+  tMin: number,
+  tMax: number
+): { x: number; y: number }[] {
+  // Use 5000 samples — enough resolution to reliably find integer-coordinate
+  // crossings without the cost of the 10000-sample alternative.
+  const SAMPLES = 5000;
+  const points: { x: number; y: number }[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i <= SAMPLES; i++) {
+    const t = tMin + (i / SAMPLES) * (tMax - tMin);
+    try {
+      const x = xFn(t);
+      const y = yFn(t);
+      if (isFinite(x) && isFinite(y) && isInteger(x) && isInteger(y)) {
+        const rx = Math.round(x);
+        const ry = Math.round(y);
+        const key = `${rx},${ry}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          points.push({ x: rx, y: ry });
+        }
+      }
+    } catch {
+      // skip evaluation errors
+    }
+  }
+  return points;
+}
+
+/**
  * Compute integer lattice points for y = f(x) over integer x values in range.
  * Returns only points where x and y are both integers.
  */

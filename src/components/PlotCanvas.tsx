@@ -4,6 +4,7 @@ import {
   compileExpression,
   compileParametricExpr,
   computeLatticePoints,
+  computeParametricLatticePoints,
 } from "../utils/math";
 
 export interface PlotCanvasHandle {
@@ -19,7 +20,7 @@ interface PlotCanvasProps {
 }
 
 const PLOT_PADDING = 48; // pixels (inside canvas) for axes/ticks
-const TICK_SIZE = 5;
+const TICK_SIZE = 8;
 const FONT_FAMILY = "Times New Roman, serif";
 
 function drawPlot(
@@ -135,7 +136,7 @@ function drawPlot(
   ctx.save();
   ctx.strokeStyle = "#000";
   ctx.fillStyle = "#000";
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1.5;
   ctx.font = `14px ${FONT_FAMILY}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
@@ -191,6 +192,12 @@ function drawPlot(
 
   // ── Function curves & lattice points ─────────────────────────────────────────
   const SAMPLES = 1000;
+
+  // Clip all curves (and lattice dots) to the plot area so nothing exits the frame
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(PLOT_PADDING, PLOT_PADDING, plotSize, plotSize);
+  ctx.clip();
 
   for (const row of rows) {
     if (!row.enabled) continue;
@@ -302,10 +309,25 @@ function drawPlot(
         }
       }
       ctx.stroke();
+
+      // Parametric lattice points
+      const lattice = computeParametricLatticePoints(xFn, yFn, row.tMin, row.tMax);
+      ctx.fillStyle = "#000";
+      for (const { x, y } of lattice) {
+        if (x < xMin || x > xMax || y < yMin || y > yMax) continue;
+        const cx = toCanvasX(x);
+        const cy = toCanvasY(y);
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     ctx.restore();
   }
+
+  // Remove curve clip so the border rectangle is drawn unclipped
+  ctx.restore();
 }
 
 const PlotCanvas = forwardRef<PlotCanvasHandle, PlotCanvasProps>(
@@ -350,18 +372,14 @@ const PlotCanvas = forwardRef<PlotCanvasHandle, PlotCanvasProps>(
     }));
 
     return (
-      <canvas
-        ref={canvasRef}
-        width={backingSize}
-        height={backingSize}
-        style={{
-          width: size,
-          height: size,
-          display: "block",
-          border: "1px solid #ccc",
-          background: "#fff",
-        }}
-      />
+      <div className="plot-canvas-wrapper">
+        <canvas
+          ref={canvasRef}
+          width={backingSize}
+          height={backingSize}
+          style={{ display: "block", width: "100%", height: "100%" }}
+        />
+      </div>
     );
   }
 );

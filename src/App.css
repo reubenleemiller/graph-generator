@@ -30,7 +30,7 @@ body {
 }
 
 /* ── Panels ───────────────────────────────────────────────────────────────── */
-.panel { background: #fff; border-radius: 10px; padding: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+.panel { background: #fff; border-radius: 10px; padding: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,.1); overflow: hidden; }
 .panel--functions { flex: 1; min-width: 320px; max-width: 520px; }
 .panel--plot { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
 
@@ -114,6 +114,8 @@ body {
   border-radius: 8px;
   padding: .75rem;
   transition: opacity .2s;
+  min-width: 0;
+  overflow: hidden;
 }
 .function-row--disabled { opacity: .55; }
 
@@ -122,11 +124,12 @@ body {
   align-items: center;
   gap: .5rem;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .function-row__label { font-size: .8rem; font-weight: 600; color: #475569; width: 20px; }
 
-.function-row__body { margin-top: .6rem; }
+.function-row__body { margin-top: .6rem; min-width: 0; width: 100%; }
 
 /* ── Toggle switch ────────────────────────────────────────────────────────── */
 .toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
@@ -189,21 +192,35 @@ body {
   display: flex;
   align-items: baseline;
   gap: .4rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  width: 100%;
 }
-.expr-prefix { font-size: .85rem; color: #64748b; white-space: nowrap; font-family: "Courier New", monospace; }
+.expr-prefix {
+  font-size: 1rem;
+  color: #1e293b;
+  white-space: nowrap;
+  font-family: "Times New Roman", Times, serif;
+  font-style: italic;
+  flex-shrink: 0;
+}
 .expr-input {
   flex: 1;
   min-width: 0;
-  font-family: "Courier New", monospace;
-  font-size: .9rem;
-  padding: .3rem .5rem;
-  border: 1px solid #e2e8f0;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1rem;
+  padding: .35rem .55rem;
+  border: 1.5px solid #cbd5e1;
   border-radius: 6px;
   outline: none;
-  transition: border-color .15s;
+  background: #fafafa;
+  transition: border-color .15s, box-shadow .15s;
 }
-.expr-input:focus { border-color: #2563eb; }
+.expr-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background: #fff;
+}
 .expr-input--error { border-color: #dc2626; }
 .expr-error {
   display: block;
@@ -214,9 +231,9 @@ body {
 }
 
 /* ── Parametric ───────────────────────────────────────────────────────────── */
-.parametric-group { display: flex; flex-direction: column; gap: .4rem; }
-.parametric-trange { display: flex; gap: 1rem; font-size: .8rem; color: #475569; }
-.trange-input { width: 60px; font-size: .8rem; padding: .15rem .3rem; border: 1px solid #e2e8f0; border-radius: 4px; margin-left: .25rem; }
+.parametric-group { display: flex; flex-direction: column; gap: .4rem; min-width: 0; width: 100%; }
+.parametric-trange { display: flex; gap: .75rem; flex-wrap: wrap; font-size: .8rem; color: #475569; }
+.trange-input { width: 72px; font-size: .8rem; padding: .2rem .35rem; border: 1px solid #e2e8f0; border-radius: 4px; margin-left: .25rem; }
 
 /* ── Viewport & export controls ───────────────────────────────────────────── */
 .viewport-controls { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
@@ -243,3 +260,50 @@ body {
 /* ── Plot area ────────────────────────────────────────────────────────────── */
 .plot-hint { font-size: .75rem; color: #94a3b8; text-align: center; }
 .empty-hint { font-size: .85rem; color: #94a3b8; text-align: center; padding: 1rem 0; }
+
+/* ── Responsive canvas wrapper ──────────────────────────────────────────── */
+.plot-canvas-wrapper {
+  width: 100%;
+  max-width: 540px;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #ccc;
+  background: #fff;
+  overflow: hidden;
+}
+
+/* ── Mobile (≤ 640 px) ──────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .app__header { padding: .75rem 1rem; }
+  .app__title { font-size: 1.2rem; }
+
+  .app__main {
+    flex-direction: column;
+    padding: .75rem;
+    gap: .75rem;
+  }
+
+  .panel--functions {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .panel--plot {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .plot-canvas-wrapper { max-width: 100%; }
+
+  /* Larger touch targets */
+  .btn-icon   { padding: .4rem .6rem; font-size: .8rem; min-height: 36px; }
+  .btn-export { padding: .4rem .6rem; font-size: .75rem; min-height: 36px; }
+  .btn-add    { padding: .5rem .9rem; font-size: .9rem; min-height: 36px; }
+  .btn-type   { padding: .4rem .6rem; font-size: .75rem; min-height: 36px; }
+  .btn-remove { padding: .4rem .6rem; min-height: 36px; }
+  .btn-export-main { min-height: 36px; padding: .4rem .7rem; font-size: .8rem; }
+
+  /* Slightly larger tap targets for colour swatches */
+  .color-swatch { width: 20px; height: 20px; }
+  .color-picker-input { width: 28px; height: 28px; }
+}

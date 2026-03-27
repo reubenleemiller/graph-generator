@@ -222,10 +222,11 @@ export default function FunctionRowComponent({
                 <input
                   type="number"
                   value={row.tMin}
-                  step={0.1}
-                  onChange={(e) =>
-                    onChange(row.id, { tMin: parseFloat(e.target.value) || 0 })
-                  }
+                  step="any"
+                  onChange={(e) => {
+                    const v = e.target.valueAsNumber;
+                    if (!isNaN(v)) onChange(row.id, { tMin: v });
+                  }}
                   className="trange-input"
                 />
               </label>
@@ -234,10 +235,11 @@ export default function FunctionRowComponent({
                 <input
                   type="number"
                   value={row.tMax}
-                  step={0.1}
-                  onChange={(e) =>
-                    onChange(row.id, { tMax: parseFloat(e.target.value) || 0 })
-                  }
+                  step="any"
+                  onChange={(e) => {
+                    const v = e.target.valueAsNumber;
+                    if (!isNaN(v)) onChange(row.id, { tMax: v });
+                  }}
                   className="trange-input"
                 />
               </label>

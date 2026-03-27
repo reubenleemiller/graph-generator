@@ -111,6 +111,21 @@ export default function App() {
     downloadCanvasAsPNG(canvas, `graph_${label}.png`);
   }
 
+  function exportAllFunctionsPNG() {
+    if (!plotRef.current) return;
+    const enabledRows = rows.filter((r) => r.enabled);
+    if (enabledRows.length === 0) return;
+    enabledRows.forEach((row, i) => {
+      const canvas = plotRef.current!.renderSingle(row);
+      if (!canvas) return;
+      const label =
+        row.type === "explicit"
+          ? (row.expression || `f${i + 1}`).replace(/\s/g, "_")
+          : `param_f${i + 1}_${(row.xExpr || "x").slice(0, 8).replace(/\s/g, "_")}`;
+      downloadCanvasAsPNG(canvas, `graph_${label}.png`);
+    });
+  }
+
   function exportSinglePDF(id: string) {
     const row = rows.find((r) => r.id === id);
     if (!row || !plotRef.current) return;
@@ -159,7 +174,7 @@ export default function App() {
       <header className="app__header">
         <h1 className="app__title">Graph Generator</h1>
         <p className="app__subtitle">
-          Desmos‑style function input · Mathematica‑style output
+          Desmos‑style function plotter
         </p>
       </header>
 
@@ -225,6 +240,13 @@ export default function App() {
             <div className="global-export__buttons">
               <button className="btn-export-main" onClick={exportCombinedPNG}>
                 Combined PNG
+              </button>
+              <button
+                className="btn-export-main"
+                onClick={exportAllFunctionsPNG}
+                title="Each enabled function as a separate PNG download"
+              >
+                All functions PNG
               </button>
               <button className="btn-export-main" onClick={exportAllCombinedPDF}>
                 Combined PDF
