@@ -63,6 +63,8 @@ export default function App() {
   const [tickInputs, setTickInputs] = useState({
     xStep: "1",
     yStep: "1",
+    labelFontSize: "18",
+    axisLabelFontSize: "18",
   });
   const plotRef = useRef<PlotCanvasHandle>(null);
 
@@ -107,7 +109,10 @@ export default function App() {
     setViewportInputs((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleTickInputChange(key: "xStep" | "yStep", value: string) {
+  function handleTickInputChange(
+    key: "xStep" | "yStep" | "labelFontSize" | "axisLabelFontSize",
+    value: string
+  ) {
     setTickInputs((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -203,6 +208,8 @@ export default function App() {
     const errors = {
       xStep: null as string | null,
       yStep: null as string | null,
+      labelFontSize: null as string | null,
+      axisLabelFontSize: null as string | null,
     };
 
     const parseStep = (value: string, axisLabel: string): number => {
@@ -226,18 +233,48 @@ export default function App() {
     const xStep = parseStep(tickInputs.xStep, "x");
     const yStep = parseStep(tickInputs.yStep, "y");
 
+    const parseFontSize = (value: string, key: "labelFontSize" | "axisLabelFontSize"): number => {
+      const raw = value.trim();
+      if (!raw) {
+        errors[key] = "Required";
+        return 18;
+      }
+      const n = Number(raw);
+      if (!Number.isFinite(n)) {
+        errors[key] = "Invalid number";
+        return 18;
+      }
+      if (n < 8 || n > 48) {
+        errors[key] = "Must be between 8 and 48";
+        return 18;
+      }
+      return n;
+    };
+
+    const tickLabelFontSize = parseFontSize(tickInputs.labelFontSize, "labelFontSize");
+    const axisLabelFontSize = parseFontSize(tickInputs.axisLabelFontSize, "axisLabelFontSize");
+
     return {
       errors,
       xStep,
       yStep,
+      tickLabelFontSize,
+      axisLabelFontSize,
     };
   }, [tickInputs]);
 
   const firstTickError = useMemo(() => {
     if (tickValidation.errors.xStep) return `x-axis ticks: ${tickValidation.errors.xStep}`;
     if (tickValidation.errors.yStep) return `y-axis ticks: ${tickValidation.errors.yStep}`;
+    if (tickValidation.errors.labelFontSize) return `tick label size: ${tickValidation.errors.labelFontSize}`;
+    if (tickValidation.errors.axisLabelFontSize) return `axis label size: ${tickValidation.errors.axisLabelFontSize}`;
     return null;
-  }, [tickValidation.errors.xStep, tickValidation.errors.yStep]);
+  }, [
+    tickValidation.errors.xStep,
+    tickValidation.errors.yStep,
+    tickValidation.errors.labelFontSize,
+    tickValidation.errors.axisLabelFontSize,
+  ]);
 
   const renderMessage = useMemo(() => {
     if (firstEquationError) return firstEquationError;
@@ -455,6 +492,68 @@ export default function App() {
                   />
                 </div>
               </label>
+              <label className="axis-tick-label">
+                <span>label size</span>
+                <div className="axis-tick-controls-inline">
+                  <input
+                    type="number"
+                    min={8}
+                    max={48}
+                    step={1}
+                    value={tickInputs.labelFontSize}
+                    onChange={(e) => handleTickInputChange("labelFontSize", e.target.value)}
+                    className={`axis-tick-input ${tickValidation.errors.labelFontSize ? "axis-tick-input--error" : ""}`}
+                    aria-invalid={!!tickValidation.errors.labelFontSize}
+                  />
+                  <input
+                    type="range"
+                    min={8}
+                    max={48}
+                    step={1}
+                    value={
+                      Number.isFinite(Number(tickInputs.labelFontSize))
+                      && Number(tickInputs.labelFontSize) >= 8
+                      && Number(tickInputs.labelFontSize) <= 48
+                        ? Number(tickInputs.labelFontSize)
+                        : 18
+                    }
+                    onChange={(e) => handleTickInputChange("labelFontSize", e.target.value)}
+                    className="drag-slider"
+                    title="tick label font size drag control"
+                  />
+                </div>
+              </label>
+              <label className="axis-tick-label">
+                <span>axis label</span>
+                <div className="axis-tick-controls-inline">
+                  <input
+                    type="number"
+                    min={8}
+                    max={48}
+                    step={1}
+                    value={tickInputs.axisLabelFontSize}
+                    onChange={(e) => handleTickInputChange("axisLabelFontSize", e.target.value)}
+                    className={`axis-tick-input ${tickValidation.errors.axisLabelFontSize ? "axis-tick-input--error" : ""}`}
+                    aria-invalid={!!tickValidation.errors.axisLabelFontSize}
+                  />
+                  <input
+                    type="range"
+                    min={8}
+                    max={48}
+                    step={1}
+                    value={
+                      Number.isFinite(Number(tickInputs.axisLabelFontSize))
+                      && Number(tickInputs.axisLabelFontSize) >= 8
+                      && Number(tickInputs.axisLabelFontSize) <= 48
+                        ? Number(tickInputs.axisLabelFontSize)
+                        : 18
+                    }
+                    onChange={(e) => handleTickInputChange("axisLabelFontSize", e.target.value)}
+                    className="drag-slider"
+                    title="axis label font size drag control"
+                  />
+                </div>
+              </label>
             </div>
           </div>
 
@@ -493,6 +592,8 @@ export default function App() {
               viewport={viewportValidation.viewport}
               xTickStep={tickValidation.xStep}
               yTickStep={tickValidation.yStep}
+              tickLabelFontSize={tickValidation.tickLabelFontSize}
+              axisLabelFontSize={tickValidation.axisLabelFontSize}
               size={540}
               resolution={2}
             />

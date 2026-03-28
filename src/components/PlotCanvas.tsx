@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useState } from "react";
 import type { FunctionRow, ViewportConfig } from "../types";
 import {
   compileExpression,
@@ -17,6 +17,8 @@ interface PlotCanvasProps {
   viewport: ViewportConfig;
   xTickStep?: number;
   yTickStep?: number;
+  tickLabelFontSize?: number;
+  axisLabelFontSize?: number;
   size?: number; // CSS pixel size of the canvas
   resolution?: number; // backing pixel multiplier for HiDPI
 }
@@ -25,6 +27,8 @@ const PLOT_PADDING = 48; // pixels (inside canvas) for axes/ticks
 const TICK_SIZE = 6;
 const TICK_WIDTH = 1.8;
 const FONT_FAMILY = "Times New Roman, serif";
+const TICK_LABEL_GAP = 4;
+const CANVAS_TEXT_MARGIN = 6;
 
 function drawPlot(
   ctx: CanvasRenderingContext2D,
@@ -32,6 +36,8 @@ function drawPlot(
   viewport: ViewportConfig,
   xTickStep: number,
   yTickStep: number,
+  tickLabelFontSize: number,
+  axisLabelFontSize: number,
   canvasSize: number
 ): void {
   const { xMin, xMax, yMin, yMax } = viewport;
@@ -79,7 +85,7 @@ function drawPlot(
   // ── Grid lines ──────────────────────────────────────────────────────────────
   ctx.save();
   ctx.strokeStyle = "rgba(128,128,128,0.6)";
-  ctx.lineWidth = 0.8;
+  ctx.lineWidth = 1.4;
 
   for (const gx of xTicks) {
     const cx = toCanvasX(gx);
@@ -164,12 +170,18 @@ function drawPlot(
   ctx.strokeStyle = "#000";
   ctx.fillStyle = "#000";
   ctx.lineWidth = TICK_WIDTH;
-  ctx.font = `18px ${FONT_FAMILY}`;
+  ctx.font = `${tickLabelFontSize}px ${FONT_FAMILY}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
 
   const xAxisYCanvas = toCanvasY(axisY);
   const yAxisXCanvas = toCanvasX(axisX);
+
+  const xLabelsBelowAxis = xAxisYCanvas + TICK_SIZE + TICK_LABEL_GAP + tickLabelFontSize <= canvasSize - CANVAS_TEXT_MARGIN;
+  const xLabelBaseline = xLabelsBelowAxis ? "top" : "bottom";
+  const xLabelY = xLabelsBelowAxis
+    ? xAxisYCanvas + TICK_SIZE + TICK_LABEL_GAP
+    : xAxisYCanvas - TICK_SIZE - TICK_LABEL_GAP;
 
   for (const tx of xTicks) {
     if (Math.abs(tx) < EPSILON) continue;
@@ -178,10 +190,12 @@ function drawPlot(
     ctx.moveTo(cx, xAxisYCanvas - TICK_SIZE);
     ctx.lineTo(cx, xAxisYCanvas + TICK_SIZE);
     ctx.stroke();
-    ctx.fillText(formatTickValue(tx), cx, xAxisYCanvas + TICK_SIZE + 2);
+    ctx.textBaseline = xLabelBaseline;
+    ctx.fillText(formatTickValue(tx), cx, xLabelY);
   }
 
-  ctx.textAlign = "right";
+  const yLabelsLeftOfAxis = yAxisXCanvas - TICK_SIZE - TICK_LABEL_GAP - 28 >= CANVAS_TEXT_MARGIN;
+  ctx.textAlign = yLabelsLeftOfAxis ? "right" : "left";
   ctx.textBaseline = "middle";
   for (const ty of yTicks) {
     if (Math.abs(ty) < EPSILON) continue;
@@ -190,14 +204,17 @@ function drawPlot(
     ctx.moveTo(yAxisXCanvas - TICK_SIZE, cy);
     ctx.lineTo(yAxisXCanvas + TICK_SIZE, cy);
     ctx.stroke();
-    ctx.fillText(formatTickValue(ty), yAxisXCanvas - TICK_SIZE - 3, cy);
+    const yLabelX = yLabelsLeftOfAxis
+      ? yAxisXCanvas - TICK_SIZE - TICK_LABEL_GAP
+      : yAxisXCanvas + TICK_SIZE + TICK_LABEL_GAP;
+    ctx.fillText(formatTickValue(ty), yLabelX, cy);
   }
   ctx.restore();
 
   // ── Axis labels ──────────────────────────────────────────────────────────────
   ctx.save();
   ctx.fillStyle = "#000";
-  ctx.font = `16pt ${FONT_FAMILY}`;
+  ctx.font = `${axisLabelFontSize}px ${FONT_FAMILY}`;
 
   // "x" label at the right end of x-axis
   ctx.textAlign = "left";
@@ -359,11 +376,44 @@ function drawPlot(
 
 const PlotCanvas = forwardRef<PlotCanvasHandle, PlotCanvasProps>(
   function PlotCanvas(
-    { rows, viewport, xTickStep = 1, yTickStep = 1, size = 540, resolution = 2 },
+    {
+      rows,
+      viewport,
+      xTickStep = 1,
+      yTickStep = 1,
+      tickLabelFontSize = 18,
+      axisLabelFontSize = 18,
+      size = 540,
+      resolution = 2,
+    },
     ref
   ) {
+    const wrapperRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const backingSize = size * resolution;
+    const [displaySize, setDisplaySize] = useState(size);
+    const backingSize = displaySize * resolution;
+
+    useEffect(() => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+
+      const updateSize = (): void => {
+        const width = Math.floor(wrapper.getBoundingClientRect().width);
+        if (!Number.isFinite(width) || width <= 0) return;
+        setDisplaySize(Math.min(size, width));
+      };
+
+      updateSize();
+
+      const observer = new ResizeObserver(() => {
+        updateSize();
+      });
+      observer.observe(wrapper);
+
+      return () => {
+        observer.disconnect();
+      };
+    }, [size]);
 
     const render = useCallback(() => {
       const canvas = canvasRef.current;
@@ -372,9 +422,27 @@ const PlotCanvas = forwardRef<PlotCanvasHandle, PlotCanvasProps>(
       if (!ctx) return;
       ctx.save();
       ctx.scale(resolution, resolution);
-      drawPlot(ctx, rows, viewport, xTickStep, yTickStep, size);
+      drawPlot(
+        ctx,
+        rows,
+        viewport,
+        xTickStep,
+        yTickStep,
+        tickLabelFontSize,
+        axisLabelFontSize,
+        displaySize
+      );
       ctx.restore();
-    }, [rows, viewport, xTickStep, yTickStep, size, resolution]);
+    }, [
+      rows,
+      viewport,
+      xTickStep,
+      yTickStep,
+      tickLabelFontSize,
+      axisLabelFontSize,
+      displaySize,
+      resolution,
+    ]);
 
     useEffect(() => {
       render();
@@ -385,21 +453,31 @@ const PlotCanvas = forwardRef<PlotCanvasHandle, PlotCanvasProps>(
         return canvasRef.current;
       },
       renderSingle(row: FunctionRow): HTMLCanvasElement | null {
+        const exportBackingSize = size * resolution;
         const offscreen = document.createElement("canvas");
-        offscreen.width = backingSize;
-        offscreen.height = backingSize;
+        offscreen.width = exportBackingSize;
+        offscreen.height = exportBackingSize;
         const ctx = offscreen.getContext("2d");
         if (!ctx) return null;
         ctx.save();
         ctx.scale(resolution, resolution);
-        drawPlot(ctx, [row], viewport, xTickStep, yTickStep, size);
+        drawPlot(
+          ctx,
+          [row],
+          viewport,
+          xTickStep,
+          yTickStep,
+          tickLabelFontSize,
+          axisLabelFontSize,
+          size
+        );
         ctx.restore();
         return offscreen;
       },
     }));
 
     return (
-      <div className="plot-canvas-wrapper">
+      <div ref={wrapperRef} className="plot-canvas-wrapper">
         <canvas
           ref={canvasRef}
           width={backingSize}

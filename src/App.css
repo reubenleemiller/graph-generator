@@ -277,7 +277,7 @@ math-field.math-input--error {
 .axis-tick-controls h3 { font-size: .85rem; font-weight: 600; color: #475569; margin-bottom: .6rem; }
 .axis-tick-grid { display: grid; grid-template-columns: 1fr; gap: .45rem; }
 .axis-tick-label { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: #475569; }
-.axis-tick-label span { width: 44px; }
+.axis-tick-label span { width: 72px; }
 .axis-tick-controls-inline { display: flex; align-items: center; gap: .45rem; flex: 1; min-width: 0; }
 .axis-tick-input { width: 100px; font-size: .8rem; padding: .2rem .35rem; border: 1px solid #e2e8f0; border-radius: 4px; }
 .axis-tick-input--error { border-color: #dc2626; }
